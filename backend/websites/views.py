@@ -4,10 +4,10 @@ from rest_framework.response import Response
 from rest_framework import status
 
 from websites import models
-
 from websites.serializers import WebsitesSerializer, WebsiteSerializer
 
 from rest_framework.pagination import PageNumberPagination
+from rest_framework.permissions import IsAuthenticatedOrReadOnly
 
 
 class Websites(APIView):
@@ -23,7 +23,9 @@ class Websites(APIView):
         return Response(data)
 
     def post(self, request):
-        serializer = WebsiteSerializer(data=request.data)
+        ip = request.META['REMOTE_ADDR']
+
+        serializer = WebsiteSerializer(data=request.data, context={'ip': ip})
         if serializer.is_valid():
             serializer.save(user_id=request.user.id)
             return Response(serializer.data, status=status.HTTP_201_CREATED)
@@ -32,36 +34,44 @@ class Websites(APIView):
 
 
 class Website(APIView):
-    def get_queryset(self, website_id):
-        website = models.Website.objects.filter(id=website_id).first()
+    permission_classes = [IsAuthenticatedOrReadOnly]
+
+    def get_queryset(self, website_slug):
+        website = models.Website.objects.filter(slug=website_slug).first()
 
         if not website:
             raise Http404()
 
         return website
 
-    def get(self, request, website_id):
-        website = self.get_queryset(website_id)
+    def get(self, request, website_slug):
+        website = models.Website.objects.filter(slug=website_slug).first()
+        ip = request.META['REMOTE_ADDR']
 
-        serializer = WebsiteSerializer(website)
-        return Response(serializer.data)
+        if not website:
+            raise Http404()
 
-    def put(self, request, website_id):
-        website = self.get_queryset(website_id)
+        serializer = WebsiteSerializer(website, context={'ip': ip})
+        return Response({"website": serializer.data})
+
+    def put(self, request, website_slug):
+        website = self.get_queryset(website_slug)
         data = request.data
+        ip = request.META['REMOTE_ADDR']
 
-        serializer = WebsiteSerializer(website, data=data, partial=True)
+        serializer = WebsiteSerializer(
+            website, data=data, partial=True,  context={'ip': ip})
 
         if serializer.is_valid():
             serializer.update(instance=website, validated_data=data)
 
-            serializer = WebsiteSerializer(website)
+            serializer = WebsiteSerializer(website, context={'ip': ip})
             return Response(serializer.data)
 
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-    def delete(self, request, website_id):
-        website = self.get_queryset(website_id)
+    def delete(self, request, website_slug):
+        website = self.get_queryset(website_slug)
         website.delete()
 
-        return Response({"id": website_id}, status=status.HTTP_200_OK)
+        return Response({"success": True}, status=status.HTTP_200_OK)

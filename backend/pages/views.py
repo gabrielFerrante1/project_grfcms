@@ -2,6 +2,7 @@ from rest_framework.views import APIView
 
 from rest_framework import status
 from rest_framework.response import Response
+from rest_framework.permissions import AllowAny
 from django.http.response import Http404
 
 from websites.models import Website
@@ -16,10 +17,10 @@ class Pages(APIView):
 
         pages = PagesSerializer(pages, many=True)
 
-        return Response(pages.data)
+        return Response({"pages": pages.data})
 
     def post(self, request):
-        website_id = request.POST.get('website', 0)
+        website_id = request.data.get('website', 0)
         if not Website.objects.filter(id=website_id, user_id=request.user.id).first():
             return Response({"detail": "Envie o parametro website"}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -53,7 +54,7 @@ class Page(APIView):
         page = PageSerializer(page)
 
         return Response(page.data)
-
+    
     def put(self, request, page_id):
         page_queryset = self.get_queryset(page_id, request.user.id)
 
@@ -73,3 +74,17 @@ class Page(APIView):
         page.delete()
 
         return Response({"id": page_id})
+
+
+class PageData (APIView):
+    permission_classes = [AllowAny]
+
+    def get(self, request, page_slug):
+        page = ModelPage.objects.filter(slug=page_slug).first()
+
+        if not page:
+            raise Http404()
+
+        page = PageSerializer(page)
+
+        return Response({"page": page.data})

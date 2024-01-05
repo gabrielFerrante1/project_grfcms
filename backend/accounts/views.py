@@ -10,12 +10,13 @@ from rest_framework.authtoken.models import Token
 from accounts.auth import Authentication
 from rest_framework import status
 
+
 class AccountLogin(APIView):
     permission_classes = [AllowAny]
 
     def post(self, request):
-        email = request.POST.get('email')
-        password = request.POST.get('password')
+        email = request.data.get('email')
+        password = request.data.get('password')
 
         user = Authentication.signin(self, email=email, password=password)
         refresh = RefreshToken.for_user(user)
@@ -27,19 +28,33 @@ class AccountLogin(APIView):
                 "email": user.email
             },
             "refresh": str(refresh),
-            "access": str(refresh.access_token) 
+            "access": str(refresh.access_token)
         })
 
 
 class AccountCreate(APIView):
-    def post(self, request):
-        name = request.POST.get('name')
-        email = request.POST.get('email')
-        password = request.POST.get('password')
+    permission_classes = [AllowAny]
 
-        signup_user = Authentication.signup(self, name=name, email=email, password=password)
+    def post(self, request):
+        name = request.data.get('name')
+        email = request.data.get('email')
+        password = request.data.get('password')
+
+        signup_user = Authentication.signup(
+            self, name=name, email=email, password=password)
 
         if signup_user == True:
             return Response({"success": True}, status=status.HTTP_201_CREATED)
         else:
-            return Response(signup_user, status=status.HTTP_400_BAD_REQUEST)
+            return Response({signup_user}, status=status.HTTP_400_BAD_REQUEST)
+
+
+class AccountGetUser(APIView):
+    def get(self, request):
+        return Response({
+            "user": {
+                "id": request.user.id,
+                "name": request.user.name,
+                "email": request.user.email,
+            }
+        })

@@ -7,6 +7,8 @@ class HistorysSerializer(serializers.ModelSerializer):
         model = History
         fields = (
             'id',
+            'ip',
+            'banned',
             'date',
         )
 
@@ -16,6 +18,7 @@ class HistorySerializer(serializers.ModelSerializer):
         model = History
         fields = (
             'id',
+            'ip',
             'website_id',
             'banned',
             'date',

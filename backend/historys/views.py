@@ -10,14 +10,10 @@ from websites.models import Website
 from .models import History
 from .serializers import HistorySerializer, HistorysSerializer
 
-from rest_framework.pagination import PageNumberPagination
-
 from rest_framework.permissions import AllowAny
 
 
 class Historys(APIView):
-    paginator = PageNumberPagination()
-
     def get(self, request):
         website_id = request.GET.get('website')
         if not website_id:
@@ -30,20 +26,18 @@ class Historys(APIView):
         if not query_website:
             raise Http404()
 
-        queryset = History.objects.filter(website_id=website_id)
-        paginate_queryset = self.paginator.paginate_queryset(queryset, request)
+        historys = History.objects.filter(website_id=website_id)
 
-        serializer = HistorysSerializer(paginate_queryset, many=True)
-        data = self.paginator.get_paginated_response(serializer.data).data
+        serializer = HistorysSerializer(historys, many=True)
 
-        return Response(data)
+        return Response({"historys": serializer.data})
 
 
 class HistoryAuthorization(APIView):
     permission_classes = [AllowAny]
 
     def post(self, request):
-        website_id = request.POST.get('website', 0)
+        website_id = request.data.get('website', 0)
         ip = request.META['REMOTE_ADDR']
 
         query_website = Website.objects.filter(
